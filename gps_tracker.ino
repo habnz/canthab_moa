@@ -1,5 +1,6 @@
 #include <SoftwareSerial.h>
 #include <TinyGPS.h>
+#include <util/crc16.h>
 
 #define GPS_RX_PIN 10
 #define GPS_TX_PIN 11
@@ -23,6 +24,12 @@ SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
 TinyGPS gps;
 
 char datastring[80];
+char temperaturestring[6];
+char checksumstring[6];
+char latitudestring[11];
+char longitudestring[11];
+int sentence_id = 0;
+unsigned int checksum;
 
 void flashLed()
 {
@@ -108,11 +115,32 @@ float getTemperature()
   return (voltage - 0.5) * 100;
 }
 
+uint16_t gps_CRC16_checksum (char *string)
+{
+  size_t i;
+  uint16_t crc;
+  uint8_t c;
+ 
+  crc = 0xFFFF;
+ 
+  // Calculate checksum ignoring the first two $s
+  for (i = 2; i < strlen(string); i++)
+  {
+    c = string[i];
+    crc = _crc_xmodem_update (crc, c);
+  }
+ 
+  return crc;
+}
+
 void loop()
 {
-  long lat, lon, altitude;
-  unsigned long fix_age, date, time, speed, course;
+  float lat, lon;
+  long altitude;
+  unsigned long fix_age, speed, course;
   unsigned short satellites;
+  int year;
+  byte month, day, hours, minutes, seconds, hundredths;
   
   gpsSerial.begin(9600);
   
@@ -122,8 +150,9 @@ void loop()
     // Serial.print(c);
     if(gps.encode(c)) {
       flashLed();
-      gps.get_position(&lat, &lon, &fix_age);
-      gps.get_datetime(&date, &time, &fix_age);
+      gps.f_get_position(&lat, &lon, &fix_age);
+      gps.crack_datetime(&year, &month, &day,
+        &hours, &minutes, &seconds, &hundredths, &fix_age);
       speed = gps.speed();
       course = gps.course();
       satellites = gps.satellites();
@@ -135,10 +164,10 @@ void loop()
       Serial.print(lat);
       Serial.print(" Lon: ");
       Serial.println(lon);
-      Serial.print("Date: ");
-      Serial.print(date);
       Serial.print(" Time: ");
-      Serial.println(time);
+      Serial.print(hours); Serial.print(":");
+      Serial.print(minutes); Serial.print(":");
+      Serial.println(seconds);
       Serial.print("Speed: ");
       Serial.print(speed);
       Serial.print(" Course: ");
@@ -159,12 +188,22 @@ void loop()
       Serial.println(temperature);
       
       gpsSerial.end();
+
+      // FIXME - Double check widths
+      dtostrf(temperature, 5, 2, temperaturestring);
+      dtostrf(lat, 10, 6, latitudestring);
+      dtostrf(lon, 10, 6, longitudestring);
       
       sprintf(
         datastring,
-        "$$$ZL3ML,%ld,%ld,%ld,%d\n",
-        lat, lon, altitude, temperature
+        "$$ZL3ML,%d,%02d:%02d:%02d,%s,%s,%ld,%lu,%lu,%s",
+        sentence_id++, hours, minutes, seconds,
+        latitudestring, longitudestring,
+        altitude, speed, course, temperaturestring
       );
+      checksum = gps_CRC16_checksum(datastring);
+      sprintf(checksumstring, "*%04X\n", checksum);
+      strcat(datastring, checksumstring);
      
       Serial.print("datastring = ");
       Serial.println(datastring);
