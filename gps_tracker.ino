@@ -95,6 +95,15 @@ void tx(char *string) {
   
   c = *string++;
   
+  /**
+   * Begin each sentence with 4 null bytes to allow the
+   * receivers to sync.
+  **/
+  rtty_txbyte(0x00);
+  rtty_txbyte(0x00);
+  rtty_txbyte(0x00);
+  rtty_txbyte(0x00);
+
   while (c != '\0') {
     rtty_txbyte(c);
     c = *string++;
