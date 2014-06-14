@@ -11,8 +11,10 @@
   */
 #define AUDIO_PIN 12
 
-#define MARK_FREQ 1585
-#define SPACE_FREQ 1415
+//#define MARK_FREQ 1585
+#define MARK_FREQ 1649
+//#define SPACE_FREQ 1415
+#define SPACE_FREQ 1472
 
 // Baud rate in millis.  (1 second / 45.45) * 1_000_000
 #define BAUD_RATE 22002
