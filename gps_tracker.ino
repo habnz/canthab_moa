@@ -1,29 +1,25 @@
 #include <SoftwareSerial.h>
 #include <TinyGPS.h>
 #include <util/crc16.h>
+#include <SPI.h>
+#include <RFM22.h>
 
-#define GPS_RX_PIN 10
-#define GPS_TX_PIN 11
+#define GPS_RX_PIN 8
+#define GPS_TX_PIN 9
 #define LED_PIN 13
+#define NSEL_PIN 10 // CSN on Sparkfun RFM22b break out
 
 /**
-  * Set fldigi to 45.5 baud, 2 stop bits, 7 bit ascii
+  * Set fldigi to 50 baud, 2 stop bits, 7 bit ascii, 500hz shift
   */
-#define AUDIO_PIN 12
-
-//#define MARK_FREQ 1585
-#define MARK_FREQ 1649
-//#define SPACE_FREQ 1415
-#define SPACE_FREQ 1472
-
-// Baud rate in millis.  (1 second / 45.45) * 1_000_000
-#define BAUD_RATE 22002
 
 // Analog
 #define TEMPERATURE_PIN 0
 
 SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
 TinyGPS gps;
+
+rfm22 radio1(10);
 
 char datastring[80];
 char temperaturestring[6];
@@ -39,10 +35,30 @@ void flashLed()
   delay(50);
   digitalWrite(LED_PIN, LOW);
 }
-// Returns microseconds
-int frequencyToDelay(int frequency)
-{
-  return (1000000/frequency) / 2;
+
+void setupRadio(){
+
+  digitalWrite(5, LOW);
+
+  delay(1000);
+
+  rfm22::initSPI();
+
+  radio1.init();
+
+  radio1.write(0x71, 0x00); // unmodulated carrier
+
+  //This sets up the GPIOs to automatically switch the antenna depending on Tx or Rx state, only needs to be done at start up
+  radio1.write(0x0b,0x12);
+  radio1.write(0x0c,0x15);
+
+  radio1.setFrequency(434.201);
+
+  //Quick test
+  radio1.write(0x07, 0x08); // turn tx on
+  delay(1000);
+  radio1.write(0x07, 0x01); // turn tx off
+
 }
 
 void rtty_txbyte(char c) {
@@ -68,33 +84,22 @@ void rtty_txbyte(char c) {
 void rtty_txbit(int bit)
 {
   if (bit) {
-    playFrequency(MARK_FREQ);
+    radio1.setFrequency(434.2010);
   } else {
-    playFrequency(SPACE_FREQ);
+    radio1.setFrequency(434.2015);
   }
-}
-
-void playFrequency(int frequency)
-{
-  int delayLength = frequencyToDelay(frequency);
-  int cycles = 22002 / (delayLength) / 2;
-
-  //long targetTime = millis() + BAUD_RATE;
-  //while(millis() < targetTime) {
-  for(int i = 0; i < cycles; i++) {
-    digitalWrite(AUDIO_PIN, HIGH);
-    delayMicroseconds(delayLength);
-    digitalWrite(AUDIO_PIN, LOW);
-    delayMicroseconds(delayLength);
-  }
+  delayMicroseconds(19500);
 }
 
 void tx(char *string) {
-  
+
   char c;
-  
+
   c = *string++;
-  
+
+  // Turn TX on
+  radio1.write(0x07, 0x08);
+
   /**
    * Begin each sentence with 4 null bytes to allow the
    * receivers to sync.
@@ -108,14 +113,18 @@ void tx(char *string) {
     rtty_txbyte(c);
     c = *string++;
   }
+
+  // Turn TX off
+  radio1.write(0x07, 0x01);
 }
 
 void setup()
 {
   pinMode(LED_PIN, OUTPUT);
-  pinMode(AUDIO_PIN, OUTPUT);
   Serial.begin(9600);
   gpsSerial.begin(9600);
+  flashLed();
+  setupRadio();
   flashLed();
 }
 
@@ -218,7 +227,6 @@ void loop()
      
       Serial.print("datastring = ");
       Serial.println(datastring);
-      // TODO TX
       tx(datastring);
     }
   }
