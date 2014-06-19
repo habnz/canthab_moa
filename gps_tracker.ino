@@ -9,12 +9,15 @@
 #define LED_PIN 13
 #define NSEL_PIN 10 // CSN on Sparkfun RFM22b break out
 
+// Analog
+#define TEMPERATURE_PIN 0
+
+#define NULL_PADDING_BYTES 8
+
 /**
   * Set fldigi to 50 baud, 2 stop bits, 7 bit ascii, 500hz shift
   */
 
-// Analog
-#define TEMPERATURE_PIN 0
 
 SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
 TinyGPS gps;
@@ -101,14 +104,13 @@ void tx(char *string) {
   radio1.write(0x07, 0x08);
 
   /**
-   * Begin each sentence with 4 null bytes to allow the
-   * receivers to sync.
+   * Begin each sentence with null bytes to allow the
+   * transmitter to stabilise and receivers to sync.
   **/
-  rtty_txbyte(0x00);
-  rtty_txbyte(0x00);
-  rtty_txbyte(0x00);
-  rtty_txbyte(0x00);
-
+  for (int i=0 ; i<NULL_PADDING_BYTES; i++) {
+    rtty_txbyte(0x00);
+  }
+  
   while (c != '\0') {
     rtty_txbyte(c);
     c = *string++;
