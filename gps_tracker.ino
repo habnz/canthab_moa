@@ -137,7 +137,12 @@ float getTemperature()
 {
   int tempReading = analogRead(TEMPERATURE_PIN);
   float voltage = (tempReading * 3.3) / 1024.0;
-  return (voltage - 0.5) * 100;
+  float temperature = (voltage - 0.5) * 100;
+  /* Reject crazy values */
+  if (temperature > 99.0) {
+    temperature = 99.0;
+  }
+  return temperature;
 }
 
 uint16_t gps_CRC16_checksum (char *string)
