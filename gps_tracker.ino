@@ -4,8 +4,8 @@
 #include <SPI.h>
 #include <RFM22.h>
 
-#define GPS_RX_PIN 8
-#define GPS_TX_PIN 9
+#define GPS_RX_PIN 4
+#define GPS_TX_PIN 3
 #define LED_PIN 13
 #define NSEL_PIN 10 // CSN on Sparkfun RFM22b break out
 
