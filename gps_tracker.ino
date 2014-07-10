@@ -14,6 +14,9 @@
 
 #define NULL_PADDING_BYTES 8
 
+float mark_freq = 434.5010;
+float space_freq = 434.5015;
+
 /**
   * Set fldigi to 50 baud, 2 stop bits, 7 bit ascii, 500hz shift
   */
@@ -55,7 +58,7 @@ void setupRadio(){
   radio1.write(0x0b,0x12);
   radio1.write(0x0c,0x15);
 
-  radio1.setFrequency(434.201);
+  radio1.setFrequency(mark_freq);
 
   //Quick test
   radio1.write(0x07, 0x08); // turn tx on
@@ -87,9 +90,9 @@ void rtty_txbyte(char c) {
 void rtty_txbit(int bit)
 {
   if (bit) {
-    radio1.setFrequency(434.2010);
+    radio1.setFrequency(mark_freq);
   } else {
-    radio1.setFrequency(434.2015);
+    radio1.setFrequency(space_freq);
   }
   delayMicroseconds(19500);
 }
