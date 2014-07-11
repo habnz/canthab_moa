@@ -226,7 +226,7 @@ void loop()
       
       sprintf(
         datastring,
-        "$$ZL3ML,%d,%02d:%02d:%02d,%s,%s,%ld,%lu,%lu,%s",
+        "$$MOA,%d,%02d:%02d:%02d,%s,%s,%ld,%lu,%lu,%s",
         sentence_id++, hours, minutes, seconds,
         latitudestring, longitudestring,
         altitude, speed, course, temperaturestring
